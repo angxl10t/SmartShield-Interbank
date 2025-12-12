@@ -1,0 +1,186 @@
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: url('../img/fondo.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+.logo-interbank {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+}
+.logo-interbank img {
+    width: 170px; 
+}
+
+.contenedor-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding-left: 50px;
+    padding-right: 20px;
+}
+
+.login-box {
+    background: white;
+    padding: 30px;
+    width: 420px;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+.titulo {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #0095DA;
+    display: block;
+}
+
+.input {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-bottom: 2px solid #009966;
+    outline: none;
+    margin-bottom: 15px;
+    font-size: 15px;
+}
+
+.password-box {
+    position: relative;
+}
+.ver {
+    position: absolute;
+    right: 5px;
+    top: 8px;
+    cursor: pointer;
+}
+
+.recordar {
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.btn-interbank {
+    width: 100%;
+    background: #009966;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+}
+.btn-interbank:hover {
+    background: #007A3E;
+}
+
+.links {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+}
+.links a {
+    color: #0033A0;
+    text-decoration: none;
+}
+
+.teclado {
+    margin-top: 10px;
+    display: none;
+    width: 100%;
+}
+
+.fila-teclado {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.tecla {
+    min-width: 28px;
+    padding: 8px;
+    text-align: center;
+    background: #f1f1f1;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    box-shadow: 0 0 1px rgba(0,0,0,0.3);
+}
+
+.tecla-funcion {
+    background: #dedede;
+    font-weight: bold;
+}
+
+.tecla-borrar {
+    padding: 8px 10px;
+}
+
+.shift-activo {
+    background: #009966 !important;
+    color: white !important;
+    border: 1px solid #007A3E;
+    transform: scale(1.05);
+}
+
+@media (max-width: 600px) {
+    .login-box {
+        width: 90%;
+        max-width: 360px;
+    }
+
+    .tecla {
+        min-width: 26px;
+        padding: 7px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 992px) {
+    .contenedor-login {
+        justify-content: center;
+        padding-left: 20px;
+    }
+
+    .login-box {
+        width: 100%;
+        max-width: 360px;
+    }
+}
+
+@media (max-width: 600px) {
+    .logo-interbank {
+        top: 10px;
+        right: 10px;
+    }
+
+    .logo-interbank img {
+        width: 140px;
+    }
+
+    .contenedor-login {
+        padding: 15px;
+        justify-content: center;
+    }
+
+    .login-box {
+        padding: 20px;
+        width: 100%;
+        max-width: 330px;
+    }
+
+    .teclado {
+        grid-template-columns: repeat(6, 1fr); /* teclas más grandes en móvil */
+    }
+}

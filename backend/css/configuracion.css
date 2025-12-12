@@ -1,0 +1,200 @@
+
+.main-config {
+    min-height: calc(100vh - 70px);
+    background-color: #f5f5f5;
+    padding: 30px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.config-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 25px 30px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+}
+
+.config-card h2 {
+    margin: 0 0 5px;
+    font-size: 22px;
+}
+
+.config-subtitle {
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: #666;
+}
+
+.alert {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 15px;
+}
+
+.alert.success {
+    background-color: #e6f7ed;
+    color: #178f4b;
+}
+
+.alert.error {
+    background-color: #fdecea;
+    color: #c0392b;
+}
+
+.config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.cfg-item {
+    background-color: #f9fafb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.cfg-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.cfg-text strong {
+    font-size: 14px;
+    color: #222;
+}
+
+.cfg-text span {
+    font-size: 12px;
+    color: #777;
+}
+
+.cfg-horarios {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: 12px;
+}
+
+.cfg-horarios label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cfg-horarios input[type="time"] {
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid #d0d7de;
+    font-size: 12px;
+}
+
+.cfg-monto {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.cfg-monto span {
+    font-weight: bold;
+    color: #009966;
+}
+
+.cfg-monto input[type="number"] {
+    width: 110px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid #d0d7de;
+    font-size: 13px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0;
+    right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .2s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+    background-color: #009966;
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+.btn-guardar {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px 0;
+    border-radius: 10px;
+    border: none;
+    background-color: #009966;
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.18);
+    transition: background-color .2s, transform .15s, box-shadow .15s;
+}
+
+.btn-guardar:hover {
+    background-color: #008c3f;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.22);
+}
+
+/* PARA AHCERLO RESPONSIVE AL MOVIUL */
+@media (max-width: 768px) {
+    .main-config {
+        padding: 15px 10px;
+        align-items: stretch;
+    }
+
+    .config-card {
+        padding: 20px 16px;
+    }
+
+    .cfg-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
