@@ -1,19 +1,13 @@
 <?php
-// MODO INTELIGENTE:
-// Preguntamos al sistema: "¿Existe un servidor llamado 'db'?"
-// Si no existe (Render), nos conectamos a nosotros mismos (127.0.0.1).
-// Si sí existe (Tu PC), nos conectamos a él.
+// Detectamos si existe la variable del Dockerfile (Render)
+$env_host = getenv('DB_HOST');
 
-$host_check = @gethostbyname('db');
-
-if ($host_check === 'db') {
-    // Si devuelve el mismo nombre, es que NO encontró la IP.
+if ($env_host) {
     // ESTAMOS EN RENDER
-    $host = '127.0.0.1';
-    $password = ''; 
+    $host = $env_host; // Será 127.0.0.1
+    $password = "";    // Contraseña vacía que configuramos en el entrypoint
 } else {
-    // Si devuelve una IP (ej. 172.18.0.2), es que SÍ existe.
-    // ESTAMOS EN TU PC (Docker Compose)
+    // ESTAMOS EN TU PC (Local)
     $host = 'db';
     $password = 'root';
 }
@@ -25,6 +19,6 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$base_datos;charset=utf8", $usuario, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Error crítico conectando a la BD: " . $e->getMessage() . " (Intentando en host: $host)");
+    die("Error de conexión: " . $e->getMessage() . " (Host: $host)");
 }
 ?>

@@ -11,10 +11,14 @@ sleep 5
 
 # --- PASO 2: Configurar Base de Datos ---
 echo "⚙️ Configurando Base de Datos..."
-# Crear usuario root y base de datos
-mysql -e "CREATE DATABASE IF NOT EXISTS interbank;"
+# 1. Crear usuario root para localhost (sistema)
 mysql -e "CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY '';"
 mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;"
+
+# 2. CREAR USUARIO ROOT PARA 127.0.0.1 (Esto es lo que necesita PHP)
+mysql -e "CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY '';"
+mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;"
+
 mysql -e "FLUSH PRIVILEGES;"
 
 # Importar tu archivo SQL (que está en la raíz)
