@@ -77,10 +77,10 @@
                 <button type="submit" class="btn-interbank">Siguiente</button>
 
                 <div class="links">
-                    <a href="#">Registrarte</a> |
-                    <a href="#">Olvidé mi contraseña</a> |
-                    <a href="#">Ayuda</a>
-                </div>
+    <a href="registrate.php">Registrarte</a> |
+    <a href="recuperar.php">Olvidé mi contraseña</a> |
+    <a href="#">Ayuda</a>
+</div>
 
             </form>
 
