@@ -219,7 +219,7 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id_usuario`, `dni`, `correo`, `nombre_completo`, `password_hash`, `rol`, `estado`, `fecha_registro`) VALUES
-(1, '12345678', 'prueba@correo.com', 'Usuario Prueba', '$2y$10$s.ZWE9K66k2rIcsF5ET9TuzGAUxeRSZvt0mi71TsFk/oCD8qWzA/2', 'cliente', 1, '2025-11-13 18:22:43');
+(1, '12345678', 'prueba@correo.com', 'Usuario Prueba', '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa', 'cliente', 1, '2025-11-13 18:22:43');
 
 --
 -- Índices para tablas volcadas

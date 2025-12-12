@@ -20,9 +20,9 @@ CORS(app)
 
 # Configuración de base de datos
 DB_CONFIG = {
-    'host': '127.0.0.1',
+    'host': 'db',
     'user': 'root',
-    'password': '',  # Cambiar si tienes contraseña en MySQL
+    'password': 'root',  # Cambiar si tienes contraseña en MySQL
     'database': 'interbank',
     'port': 3306
 }

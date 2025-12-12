@@ -1,10 +1,10 @@
 <?php
 // la bd se llama interbank, la pondre en la estrcutura
 
-$host = "localhost";
+$host = "db";
 $dbname = "interbank";
 $usuario = "root";
-$clave = ""; 
+$clave = "root"; 
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $usuario, $clave);
