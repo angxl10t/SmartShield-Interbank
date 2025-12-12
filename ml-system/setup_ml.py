@@ -73,9 +73,9 @@ def test_database_connection():
         import mysql.connector
         
         config = {
-            'host': 'db',
+            'host': 'localhost',
             'user': 'root',
-            'password': 'root',
+            'password': '',
             'database': 'interbank',
             'port': 3306
         }
@@ -114,9 +114,9 @@ def train_ml_models():
         from smartshield_ml import SmartShieldML
         
         db_config = {
-            'host': 'db',
+            'host': 'localhost',
             'user': 'root',
-            'password': 'root',
+            'password': '',
             'database': 'interbank',
             'port': 3306
         }
@@ -217,9 +217,9 @@ def test_ml_api():
         from smartshield_ml import SmartShieldML
         
         db_config = {
-            'host': 'db',
+            'host': 'localhost',
             'user': 'root',
-            'password': 'root',
+            'password': '',
             'database': 'interbank',
             'port': 3306
         }

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80" # Tu web estará en localhost:8080
+    volumes:
+      # Sincronizamos tu carpeta actual con el contenedor para ver cambios en vivo
+      - ./:/var/www/html
+    depends_on:
+      - db
+    networks:
+      - red-bancaria
+
+  db:
+    image: mysql:8.0 # O usa mysql:5.7 si tu código es muy viejo
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: smartshield_db # ¡Pon el nombre real de tu BD aquí!
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - red-bancaria
+
+volumes:
+  db_data:
+
+networks:
+  red-bancaria:

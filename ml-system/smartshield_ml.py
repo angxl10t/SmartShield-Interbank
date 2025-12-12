@@ -496,9 +496,9 @@ def train_smartshield_ml():
     
     # Configuración de base de datos
     db_config = {
-        'host': 'db',
+        'host': 'localhost',
         'user': 'root',
-        'password': 'root',  # Cambiar si tienes contraseña
+        'password': '',  # Cambiar si tienes contraseña
         'database': 'interbank',
         'port': 3306
     }
