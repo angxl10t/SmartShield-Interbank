@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     mariadb-server \
-    libmysqlclient-dev \
+    default-libmysqlclient-dev\
     git \
     unzip
 
