@@ -1,6 +1,8 @@
 # Usamos PHP con Apache como base
 FROM php:8.1-apache
 
+ENV DB_HOST=127.0.0.1
+
 # 1. Instalar Python, MySQL Server (MariaDB) y dependencias
 RUN apt-get update && apt-get install -y \
     python3 \
