@@ -25,8 +25,10 @@ if [ -f "/var/www/html/interbank.sql" ]; then
     echo "📥 Importando interbank.sql..."
     mysql interbank < /var/www/html/interbank.sql
     
-    echo "🔑 Reseteando contraseña de usuario del login..."
-    mysql interbank -e "UPDATE usuarios SET password_hash = '\$2y\$10\$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa' WHERE id_usuario = 1;"
+    # --- CAMBIO AQUÍ: USAMOS PHP PARA LA CONTRASEÑA ---
+    echo "🔑 Reseteando contraseña de usuario de prueba..."
+    php /var/www/html/force_reset.php
+    # --------------------------------------------------
 else
     echo "⚠️ NO SE ENCONTRÓ interbank.sql en la raíz"
 fi
