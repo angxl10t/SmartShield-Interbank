@@ -1,15 +1,16 @@
 <?php
-// Detectamos si existe la variable del Dockerfile (Render)
-$env_host = getenv('DB_HOST');
+// LÓGICA DE DETECCIÓN AUTOMÁTICA
+// Intentamos resolver la IP del host 'db'
+$check_dns = @gethostbyname('db');
 
-if ($env_host) {
-    // ESTAMOS EN RENDER
-    $host = $env_host; // Será 127.0.0.1
-    $password = "";    // Contraseña vacía que configuramos en el entrypoint
+// Si gethostbyname devuelve la misma cadena ('db'), significa que NO encontró la IP.
+// Por lo tanto, NO estamos en Docker Compose, estamos en Render.
+if ($check_dns === 'db') {
+    $host = '127.0.0.1'; // Render (Localhost por red)
+    $password = '';      // Sin contraseña
 } else {
-    // ESTAMOS EN TU PC (Local)
-    $host = 'db';
-    $password = 'root';
+    $host = 'db';        // Tu PC (Docker Compose)
+    $password = 'root';  // Contraseña root
 }
 
 $base_datos = "interbank";
@@ -19,6 +20,6 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$base_datos;charset=utf8", $usuario, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Error de conexión: " . $e->getMessage() . " (Host: $host)");
+    die("Error de conexión: " . $e->getMessage() . " (Intentando conectar a: $host)");
 }
 ?>
