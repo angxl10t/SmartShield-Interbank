@@ -73,7 +73,7 @@ def test_database_connection():
         import mysql.connector
         
         config = {
-            'host': '127.0.0.1',
+            'host': 'localhost',
             'user': 'root',
             'password': '',
             'database': 'interbank',
@@ -114,7 +114,7 @@ def train_ml_models():
         from smartshield_ml import SmartShieldML
         
         db_config = {
-            'host': '127.0.0.1',
+            'host': 'localhost',
             'user': 'root',
             'password': '',
             'database': 'interbank',
@@ -217,7 +217,7 @@ def test_ml_api():
         from smartshield_ml import SmartShieldML
         
         db_config = {
-            'host': '127.0.0.1',
+            'host': 'localhost',
             'user': 'root',
             'password': '',
             'database': 'interbank',
@@ -305,7 +305,7 @@ def main():
         return False
     
     steps = [
-        ("Instalar dependencias Python", install_python_packages),
+        # ("Instalar dependencias Python", install_python_packages),
         ("Crear directorios", create_ml_directories),
         ("Probar conexión BD", test_database_connection),
         ("Entrenar modelos ML", train_ml_models),
