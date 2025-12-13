@@ -80,9 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($idConfig) {
             $sqlConfig = "UPDATE config_seguridad_tarjeta
-                          SET limite_semanal      = :limite,
-                              horario_inicio      = :h_ini,
-                              horario_fin         = :h_fin,
+                          SET limite_semanal       = :limite,
+                              horario_inicio       = :h_ini,
+                              horario_fin          = :h_fin,
                               ultima_actualizacion = NOW()
                           WHERE id_config = :id_config";
             $stmtConfig = $pdo->prepare($sqlConfig);
@@ -148,10 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button class="nav-toggle" id="navToggle">☰</button>
 
             <nav class="nav-main" id="navMain">
-                <a href="/SmartShield-Interbank/frontend/index.php">Inicio</a>
-                <a href="/SmartShield-Interbank/frontend/movimientos.php">Movimientos</a>
-                <a href="/SmartShield-Interbank/frontend/configuracion.php" class="activo">Configuración</a>
-                <a href="#">Seguridad</a>
+                <a href="index.php">Inicio</a>
+                <a href="movimientos.php">Movimientos</a>
+                <a href="configuracion.php" class="activo">Configuración</a>
+                <a href="configuracion.php">Seguridad</a>
             </nav>
         </div>
 
@@ -161,9 +161,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php echo htmlspecialchars($nombreUsuario); ?> ▾
                 </div>
                 <div class="user-dropdown" id="userDropdown">
-                    <a href="#">Mi perfil</a>
-                    <a href="/frontend/configuracion.php">Configuración</a>
-                    <a href="#">Claves y seguridad</a>
+                    <a href="configuracion.php">Mi perfil</a>
+                    <a href="configuracion.php">Configuración</a>
+                    <a href="configuracion.php">Claves y seguridad</a>
                     <a href="../backend/controlador/logout.php">Cerrar sesión</a>
                 </div>
             </div>
