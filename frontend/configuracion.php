@@ -148,9 +148,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button class="nav-toggle" id="navToggle">☰</button>
 
             <nav class="nav-main" id="navMain">
-                <a href="/SmartShield-Interbank/frontend/index.php">Inicio</a>
-                <a href="/SmartShield-Interbank/frontend/movimientos.php">Movimientos</a>
-                <a href="/SmartShield-Interbank/frontend/configuracion.php" class="activo">Configuración</a>
+                <a href="index.php">Inicio</a>
+                <a href="movimientos.php">Movimientos</a>
+                <a href="configuracion.php" class="activo">Configuración</a>
                 <a href="#">Seguridad</a>
             </nav>
         </div>

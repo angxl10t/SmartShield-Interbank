@@ -9,6 +9,8 @@ if (!isset($_SESSION['autenticado']) || $_SESSION['autenticado'] !== true) {
 require_once "../backend/bd/conexion.php";
 
 $idUsuario = $_SESSION['id_usuario'];
+
+// 1. Contar alertas pendientes
 $sqlAlertCount = "SELECT COUNT(*) 
                   FROM alertas 
                   WHERE id_usuario = :id_usuario
@@ -17,6 +19,7 @@ $stmtAlert = $pdo->prepare($sqlAlertCount);
 $stmtAlert->execute([':id_usuario' => $idUsuario]);
 $alertasPendientes = (int)$stmtAlert->fetchColumn();
 
+// 2. Obtener datos de tarjeta y configuración
 $sql = "SELECT t.id_tarjeta,
                t.numero_enmascarado,
                t.marca,
@@ -35,10 +38,11 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute([':id_usuario' => $idUsuario]);
 $tarjeta = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Variables para la vista
 $nombreUsuario   = $_SESSION['nombre'] ?? 'Usuario';
 $numeroTarjeta   = $tarjeta['numero_enmascarado']   ?? '**** **** **** 0000';
 $marcaTarjeta    = $tarjeta['marca']                 ?? 'VISA';
-$estadoTarjeta   = $tarjeta['estado']                ?? 'activa';
+$estadoTarjeta   = $tarjeta['estado']                ?? 'activa'; // 'activa' o 'bloqueada'
 $saldoDisponible = isset($tarjeta['saldo_disponible']) ? (float)$tarjeta['saldo_disponible'] : 0;
 
 $limiteSemanal = isset($tarjeta['limite_semanal']) ? (float)$tarjeta['limite_semanal'] : 0;
@@ -47,17 +51,20 @@ $gastoSemanal  = isset($tarjeta['gasto_semanal_actual']) ? (float)$tarjeta['gast
 $limiteMensual = isset($tarjeta['limite_mensual']) ? (float)$tarjeta['limite_mensual'] : 0;
 $gastoMensual  = isset($tarjeta['gasto_mensual_actual']) ? (float)$tarjeta['gasto_mensual_actual'] : 0;
 
+// Cálculos para gráficas
 $porcSemanal = ($limiteSemanal > 0) ? min(100, ($gastoSemanal / $limiteSemanal) * 100) : 0;
 $porcMensual = ($limiteMensual > 0) ? min(100, ($gastoMensual / $limiteMensual) * 100) : 0;
 
 if ($limiteSemanal <= 0) {
-    $limiteSemanal = 1200.00;
+    $limiteSemanal = 1200.00; // Valor por defecto visual si no hay límite
 }
 
+// Limpiar mensajes flash anteriores
 $msgOk    = $_SESSION['msg_ok']    ?? '';
 $msgError = $_SESSION['msg_error'] ?? '';
 unset($_SESSION['msg_ok'], $_SESSION['msg_error']);
 
+// 3. Obtener alertas recientes para el modal
 $sqlAlertas = "
     SELECT 
         id_alerta,
@@ -77,9 +84,7 @@ $sqlAlertas = "
 
 $stmtAlertas = $pdo->prepare($sqlAlertas);
 $stmtAlertas->execute([':id_usuario' => $idUsuario]);
-
 $alertasRecientes = $stmtAlertas->fetchAll(PDO::FETCH_ASSOC);
-
 
 function formatearFechaAlerta($fechaHora)
 {
@@ -97,6 +102,15 @@ function formatearFechaAlerta($fechaHora)
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../backend/css/dashboard.css">
     <link rel="stylesheet" href="../backend/css/modales.css">
+    <style>
+        .btn-desbloquear {
+            background-color: #28a745 !important; /* Verde */
+            color: white;
+        }
+        .btn-desbloquear:hover {
+            background-color: #218838 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -135,9 +149,9 @@ function formatearFechaAlerta($fechaHora)
                     <?php echo htmlspecialchars($nombreUsuario); ?> ▾
                 </div>
                 <div class="user-dropdown" id="userDropdown">
-                    <a href="#">Mi perfil</a>
+                    <a href="configuracion.php">Mi perfil</a>
                     <a href="configuracion.php">Configuración</a>
-                    <a href="#">Claves y seguridad</a>
+                    <a href="configuracion.php">Claves y seguridad</a>
                     <a href="../backend/controlador/logout.php">Cerrar sesión</a>
                 </div>
             </div>
@@ -178,8 +192,8 @@ function formatearFechaAlerta($fechaHora)
                         <div class="tarjeta-marca">VISA</div>
                     </div>
 
-                    <button class="btn-estado" id="btnBloquear">
-                        Bloquear tarjeta
+                    <button class="btn-estado <?php echo $estadoTarjeta === 'bloqueada' ? 'btn-desbloquear' : ''; ?>" id="btnBloquear">
+                        <?php echo $estadoTarjeta === 'bloqueada' ? 'Desbloquear tarjeta' : 'Bloquear tarjeta'; ?>
                     </button>
                 </div>
             </div>
@@ -267,9 +281,9 @@ function formatearFechaAlerta($fechaHora)
                             <label for="destinatario">Transferir a</label>
                             <select name="destinatario" id="destinatario" class="form-control">
                                 <option value="">Seleccione un destinatario</option>
-                                <option value="1">Cuenta propia</option>
-                                <option value="2">Servicio básico</option>
-                                <option value="3">Otro beneficiario</option>
+                                <option value="Cuenta Propia">Cuenta propia</option>
+                                <option value="Pago de Servicios">Servicio básico</option>
+                                <option value="Terceros">Otro beneficiario</option>
                             </select>
                         </div>
 
@@ -371,7 +385,6 @@ function formatearFechaAlerta($fechaHora)
             }
         });
     </script>
-
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -495,8 +508,6 @@ function formatearFechaAlerta($fechaHora)
                 <?php endif; ?>
 
             </div>
-
-
 
             <div class="modal-footer">
                 <button class="modal-btn-sec" onclick="location.href='movimientos.php'">
@@ -657,7 +668,6 @@ function formatearFechaAlerta($fechaHora)
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-
             const btnEntendido = document.getElementById("btnEntendidoAlertas");
             const modalAlertas = document.getElementById("modalAlertas");
 
@@ -669,10 +679,43 @@ function formatearFechaAlerta($fechaHora)
                     }, 250);
                 });
             }
-
         });
     </script>
 
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const btnBloquear = document.getElementById("btnBloquear");
+
+        if (btnBloquear) {
+            btnBloquear.addEventListener("click", async () => {
+                // Leer el texto actual del botón para saber si vamos a bloquear o desbloquear
+                const esBloqueo = btnBloquear.textContent.includes("Bloquear");
+                
+                const confirmacion = confirm(esBloqueo ? 
+                    "¿Estás seguro de que deseas BLOQUEAR tu tarjeta temporalmente?" : 
+                    "¿Deseas REACTIVAR tu tarjeta?");
+
+                if (!confirmacion) return;
+
+                try {
+                    // Llamamos al archivo PHP que alterna el estado
+                    const resp = await fetch("../backend/controlador/toggle_bloqueo.php");
+                    const data = await resp.json();
+
+                    if (data.success) {
+                        alert(data.mensaje);
+                        location.reload(); // Recargar para actualizar la interfaz
+                    } else {
+                        alert("Error: " + (data.error || "No se pudo cambiar el estado"));
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Error de conexión con el servidor");
+                }
+            });
+        }
+    });
+    </script>
 
     <script src="https://cdn.botpress.cloud/webchat/v3.4/inject.js"></script>
     <script src="https://files.bpcontent.cloud/2025/11/15/08/20251115083512-2553XNUV.js" defer></script>
