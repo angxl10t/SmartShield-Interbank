@@ -37,8 +37,8 @@ $tarjeta = $stmt->fetch(PDO::FETCH_ASSOC);
 
 $nombreUsuario   = $_SESSION['nombre'] ?? 'Usuario';
 $numeroTarjeta   = $tarjeta['numero_enmascarado']   ?? '**** **** **** 0000';
-$marcaTarjeta    = $tarjeta['marca']                ?? 'VISA';
-$estadoTarjeta   = $tarjeta['estado']               ?? 'activa';
+$marcaTarjeta    = $tarjeta['marca']                 ?? 'VISA';
+$estadoTarjeta   = $tarjeta['estado']                ?? 'activa';
 $saldoDisponible = isset($tarjeta['saldo_disponible']) ? (float)$tarjeta['saldo_disponible'] : 0;
 
 $limiteSemanal = isset($tarjeta['limite_semanal']) ? (float)$tarjeta['limite_semanal'] : 0;
@@ -87,8 +87,6 @@ function formatearFechaAlerta($fechaHora)
     $dt = new DateTime($fechaHora);
     return $dt->format('d/m/Y H:i');
 }
-
-
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -99,7 +97,6 @@ function formatearFechaAlerta($fechaHora)
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../backend/css/dashboard.css">
     <link rel="stylesheet" href="../backend/css/modales.css">
-
 </head>
 
 <body>
@@ -116,11 +113,11 @@ function formatearFechaAlerta($fechaHora)
             </button>
 
             <nav class="nav-main" id="navMain">
-    <a href="index.php">Inicio</a>
-    <a href="movimientos.php">Movimientos</a>
-    <a href="configuracion.php" class="activo">Configuración</a>
-    <a href="configuracion.php">Seguridad</a>
-</nav>
+                <a href="index.php" class="activo">Inicio</a>
+                <a href="movimientos.php">Movimientos</a>
+                <a href="configuracion.php">Configuración</a>
+                <a href="configuracion.php">Seguridad</a>
+            </nav>
         </div>
 
         <div class="header-right">
@@ -139,7 +136,7 @@ function formatearFechaAlerta($fechaHora)
                 </div>
                 <div class="user-dropdown" id="userDropdown">
                     <a href="#">Mi perfil</a>
-                    <a href="#">Configuración</a>
+                    <a href="configuracion.php">Configuración</a>
                     <a href="#">Claves y seguridad</a>
                     <a href="../backend/controlador/logout.php">Cerrar sesión</a>
                 </div>
@@ -187,8 +184,6 @@ function formatearFechaAlerta($fechaHora)
                 </div>
             </div>
             
-            <!-- COLUMNA LA DE GASTPS -->
-
             <div class="col-middle">
                 <div class="gasto-box">
                     <div class="card-header">
@@ -232,7 +227,6 @@ function formatearFechaAlerta($fechaHora)
                 </div>
             </div>
 
-            <!-- COLUMNA 3 -->
             <div class="col-right">
                 <div class="gasto-box transfer-box">
                     <div class="card-header">
@@ -248,6 +242,12 @@ function formatearFechaAlerta($fechaHora)
                                 Saldo insuficiente para realizar la transferencia.
                             <?php elseif ($_GET['error'] === 'datos'): ?>
                                 Por favor, completa correctamente los datos de la transferencia.
+                            <?php elseif ($_GET['error'] === 'bloqueo_internacional'): ?>
+                                ⛔ <strong>Transacción rechazada:</strong> Las compras internacionales (USD) están desactivadas en tu configuración.
+                            <?php elseif ($_GET['error'] === 'bloqueo_horario'): ?>
+                                ⛔ <strong>Transacción rechazada:</strong> Estás intentando operar fuera de tu horario permitido configurado.
+                            <?php elseif ($_GET['error'] === 'bloqueo_limite'): ?>
+                                ⛔ <strong>Transacción rechazada:</strong> Esta operación excede tu límite de presupuesto semanal.
                             <?php else: ?>
                                 Ocurrió un error al procesar la transferencia.
                             <?php endif; ?>
