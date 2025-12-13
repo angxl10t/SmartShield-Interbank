@@ -15,6 +15,7 @@ if (!$idUsuario) {
     die("Usuario no identificado en la sesión.");
 }
 
+// 1. Recoger datos
 $destino      = trim($_POST['destinatario']   ?? '');
 $aliasDestino = trim($_POST['alias_destino']  ?? '');
 $numeroCuenta = trim($_POST['cuenta_destino'] ?? '');
@@ -27,13 +28,14 @@ if ($destino === '' || $numeroCuenta === '' || $monto <= 0) {
     exit;
 }
 
-
 if ($descripcion === '') {
     $descripcion = 'Transferencia simulada';
 }
 
-$sqlTarjeta = "SELECT t.id_tarjeta, t.saldo_disponible,
-                      c.id_config, c.gasto_semanal_actual, c.fecha_ultimo_reset_semanal, c.limite_semanal
+// 2. Obtener datos de tarjeta Y configuración de seguridad
+$sqlTarjeta = "SELECT t.id_tarjeta, t.saldo_disponible, t.uso_internacional,
+                      c.id_config, c.gasto_semanal_actual, c.fecha_ultimo_reset_semanal, 
+                      c.limite_semanal, c.horario_inicio, c.horario_fin
                FROM tarjetas t
                LEFT JOIN config_seguridad_tarjeta c
                     ON c.id_tarjeta = t.id_tarjeta
@@ -48,19 +50,58 @@ if (!$info) {
     die("No se encontró una tarjeta asociada al usuario.");
 }
 
-$idTarjeta            = (int)$info['id_tarjeta'];
-$saldoDisponible      = (float)$info['saldo_disponible'];
-$idConfig             = $info['id_config'] ?? null;
-$gastoSemanalActual   = isset($info['gasto_semanal_actual']) ? (float)$info['gasto_semanal_actual'] : 0;
-$fechaUltimoReset     = $info['fecha_ultimo_reset_semanal'] ?? null;
-$limiteSemanal        = isset($info['limite_semanal']) ? (float)$info['limite_semanal'] : 0;
+// Variables de tarjeta y configuración
+$idTarjeta          = (int)$info['id_tarjeta'];
+$saldoDisponible    = (float)$info['saldo_disponible'];
+$usoInternacional   = (int)$info['uso_internacional']; // 1 = Activo, 0 = Inactivo
 
+$idConfig           = $info['id_config'] ?? null;
+$limiteSemanal      = isset($info['limite_semanal']) ? (float)$info['limite_semanal'] : 0;
+$gastoSemanalActual = isset($info['gasto_semanal_actual']) ? (float)$info['gasto_semanal_actual'] : 0;
+$fechaUltimoReset   = $info['fecha_ultimo_reset_semanal'] ?? null;
+$horarioInicio      = $info['horario_inicio'] ?? '00:00:00';
+$horarioFin         = $info['horario_fin'] ?? '23:59:59';
+
+// =================================================================================
+// 🛡️ BLOQUE 1: VALIDACIONES DE SEGURIDAD (SMARTSHIELD) - ANTES DE PROCESAR
+// =================================================================================
+
+// A. VALIDACIÓN DE SALDO
 if ($monto > $saldoDisponible) {
     header("Location: ../../frontend/index.php?error=saldo");
     exit;
 }
 
-$hoy        = new DateTime('now');
+// B. VALIDACIÓN DE USO INTERNACIONAL (Simulación: Si es Dólares y está desactivado)
+if ($moneda === 'USD' && $usoInternacional === 0) {
+    header("Location: ../../frontend/index.php?error=bloqueo_internacional");
+    exit;
+}
+
+// C. VALIDACIÓN DE HORARIO
+$horaActual = date('H:i:s');
+$transaccionPermitidaHorario = false;
+
+// Lógica para rangos de hora (incluso si cruzan medianoche)
+if ($horarioInicio <= $horarioFin) {
+    // Rango normal (Ej: 06:00 a 23:00)
+    if ($horaActual >= $horarioInicio && $horaActual <= $horarioFin) {
+        $transaccionPermitidaHorario = true;
+    }
+} else {
+    // Rango nocturno cruzado (Ej: 22:00 a 06:00)
+    if ($horaActual >= $horarioInicio || $horaActual <= $horarioFin) {
+        $transaccionPermitidaHorario = true;
+    }
+}
+
+if (!$transaccionPermitidaHorario) {
+    header("Location: ../../frontend/index.php?error=bloqueo_horario");
+    exit;
+}
+
+// D. REINICIO DE GASTO SEMANAL (Si es una nueva semana)
+$hoy          = new DateTime('now');
 $inicioSemana = (clone $hoy)->modify('monday this week')->setTime(0, 0, 0);
 
 if ($fechaUltimoReset) {
@@ -72,11 +113,25 @@ if ($fechaUltimoReset) {
     $gastoSemanalActual = 0;
 }
 
+// E. VALIDACIÓN DE LÍMITE SEMANAL
+if ($limiteSemanal > 0) {
+    $gastoProyectado = $gastoSemanalActual + $monto;
+    if ($gastoProyectado > $limiteSemanal) {
+        header("Location: ../../frontend/index.php?error=bloqueo_limite");
+        exit;
+    }
+}
+
+// =================================================================================
+// FIN BLOQUE VALIDACIONES - PROCESAMIENTO DE TRANSFERENCIA
+// =================================================================================
+
 $nuevoGastoSemanal = $gastoSemanalActual + $monto;
 
 $pdo->beginTransaction();
 
 try {
+    // 1. Insertar transacción
     $sqlIns = "INSERT INTO transacciones
                (id_usuario, id_tarjeta, tipo, destino, alias_destino, numero_cuenta,
                 moneda, monto, fecha_hora, descripcion, estado)
@@ -98,6 +153,7 @@ try {
         ':estado'        => 'aplicada'
     ]);
 
+    // 2. Actualizar saldo
     $sqlUpdSaldo = "UPDATE tarjetas
                     SET saldo_disponible = saldo_disponible - :monto
                     WHERE id_tarjeta = :id_tarjeta";
@@ -107,21 +163,15 @@ try {
         ':id_tarjeta' => $idTarjeta
     ]);
 
-    $hoy = new DateTime();
-
+    // 3. Verificar total real semanal (doble check) y actualizar config
     $sqlSuma = "SELECT COALESCE(SUM(monto), 0) AS total_semana
             FROM transacciones
             WHERE id_tarjeta = :id_tarjeta
               AND YEARWEEK(fecha_hora, 1) = YEARWEEK(NOW(), 1)";
-
     $stmtSuma = $pdo->prepare($sqlSuma);
-    $stmtSuma->execute([
-        ':id_tarjeta' => $idTarjeta
-    ]);
-
+    $stmtSuma->execute([':id_tarjeta' => $idTarjeta]);
     $rowSuma = $stmtSuma->fetch(PDO::FETCH_ASSOC);
     $nuevoGastoSemanal = (float)($rowSuma['total_semana'] ?? 0);
-
 
     if ($idConfig) {
         $sqlUpdConfig = "UPDATE config_seguridad_tarjeta
@@ -136,11 +186,11 @@ try {
         ]);
     }
 
-    // Obtener ID de la transacción recién insertada
+    // Obtener ID de la transacción recién insertada para ML
     $idTransaccion = $pdo->lastInsertId();
     
     // === ANÁLISIS MACHINE LEARNING INTELIGENTE ===
-    // El ML analiza: patrón de gasto, frecuencia, lugar, monto
+    // Aunque la transacción pasó las reglas duras, el ML busca patrones anómalos
     $mlTransactionData = [
         'id_usuario' => $idUsuario,
         'monto' => $monto,
@@ -156,10 +206,9 @@ try {
         'tipo_tarjeta' => 'credito'
     ];
     
-    // ML genera alertas automáticamente basado en patrones
     generateSmartMLAlert($pdo, $idUsuario, $idTarjeta, $idTransaccion, $mlTransactionData);
 
-    // === IA BASADA EN REGLAS (sistema original) ===
+    // === IA BASADA EN REGLAS (Alertas informativas adicionales) ===
     evaluar_riesgos_y_generar_alertas(
         $pdo,
         $idUsuario,
@@ -172,17 +221,16 @@ try {
         $numeroCuenta
     );
 
-
     $pdo->commit();
     header("Location: ../../frontend/index.php?ok=1");
     exit;
+
 } catch (Exception $e) {
     $pdo->rollBack();
     die("Error al registrar la transferencia: " . $e->getMessage());
 }
 
-
-//FUNCIONES 
+// FUNCIONES DE APOYO (Mantienen lógica de alertas post-transacción)
 
 function crear_alerta(PDO $pdo, $idUsuario, $idTarjeta, $idTransaccion, $tipo, $titulo, $mensaje, $nivelRiesgo = 50)
 {
@@ -204,146 +252,56 @@ function crear_alerta(PDO $pdo, $idUsuario, $idTarjeta, $idTransaccion, $tipo, $
 }
 
 function evaluar_riesgos_y_generar_alertas(
-    PDO $pdo,
-    $idUsuario,
-    $idTarjeta,
-    $idTransaccion,
-    $monto,
-    $fechaHora,
-    $destino,
-    $aliasDestino,
-    $numeroCuenta
+    PDO $pdo, $idUsuario, $idTarjeta, $idTransaccion, $monto, $fechaHora, $destino, $aliasDestino, $numeroCuenta
 ) {
-    $sql = "SELECT limite_semanal, gasto_semanal_actual,
-                   horario_inicio, horario_fin
-            FROM config_seguridad_tarjeta
-            WHERE id_tarjeta = :id_tarjeta
-            LIMIT 1";
+    // Re-leemos configuración para las alertas
+    $sql = "SELECT limite_semanal, gasto_semanal_actual FROM config_seguridad_tarjeta WHERE id_tarjeta = :id_tarjeta LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':id_tarjeta' => $idTarjeta]);
     $config = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$config) {
-        return; 
-    }
+    if (!$config) return;
 
     $limiteSemanal = (float)($config['limite_semanal'] ?? 0);
     $gastoSemanal  = (float)($config['gasto_semanal_actual'] ?? 0);
-    $horaInicio    = $config['horario_inicio'] ?? null; 
-    $horaFin       = $config['horario_fin'] ?? null;
 
-    $tituloBase = $aliasDestino !== '' ? $aliasDestino
-        : ($destino !== '' ? $destino : 'Transferencia');
-
-    // ESTE AVISA SOBRE SI YA VAS A LLEGAR A TU LIMITEE
+    // Alerta de Límite Cercano (Amarillo)
     if ($limiteSemanal > 0) {
         $ratio = $gastoSemanal / $limiteSemanal;
-
         if ($ratio >= 0.7 && $ratio < 1.0) {
-            crear_alerta(
-                $pdo,
-                $idUsuario,
-                $idTarjeta,
-                $idTransaccion,
-                'limite_cercano',
+            crear_alerta($pdo, $idUsuario, $idTarjeta, $idTransaccion, 'limite_cercano',
                 'Consumo cercano a tu límite semanal',
-                "Tu gasto semanal con SmartShield Interbank se acerca al límite configurado. 
-Revisa tus últimas compras para mantener controlado tu presupuesto.",
-                60
-            );
-        } elseif ($ratio >= 1.0) {
-            crear_alerta(
-                $pdo,
-                $idUsuario,
-                $idTarjeta,
-                $idTransaccion,
-                'limite_superado',
-                'Has superado tu límite semanal',
-                "Tu consumo semanal ha superado el tope configurado. 
-Te recomendamos revisar tus operaciones recientes y, si es necesario, ajustar tu límite.",
-                80
-            );
+                "Tu gasto semanal con SmartShield se acerca al límite configurado.", 60);
         }
     }
 
-    // FUERA DEL RANGO Q CONFIGURAS EN CONFIGURACION
-    if ($horaInicio && $horaFin) {
-        $horaTx   = (new DateTime($fechaHora))->format('H:i:s');
-
-        if ($horaInicio < $horaFin) {
-            $fueraHorario = ($horaTx < $horaInicio || $horaTx > $horaFin);
-        } else {
-            $fueraHorario = !($horaTx >= $horaInicio || $horaTx <= $horaFin);
-        }
-
-        if ($fueraHorario) {
-            crear_alerta(
-                $pdo,
-                $idUsuario,
-                $idTarjeta,
-                $idTransaccion,
-                'fuera_horario',
-                'Operación fuera del horario configurado',
-                "Se detectó una transferencia realizada fuera del horario que tienes configurado 
-para tus compras habituales. Verifica si reconoces esta operación.",
-                70
-            );
-        }
-    }
-
-    // CALCULA EL PROMEDIO Y TE DICE MONTO INUSUAL EN BASE AL PROMEDIO
-    $sqlProm = "SELECT AVG(monto) AS promedio
-                FROM transacciones
-                WHERE id_usuario = :id_usuario
-                  AND fecha_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                  AND monto > 0";
+    // Alerta Monto Inusual (Promedio)
+    $sqlProm = "SELECT AVG(monto) AS promedio FROM transacciones 
+                WHERE id_usuario = :id_usuario AND fecha_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND monto > 0";
     $stmtProm = $pdo->prepare($sqlProm);
     $stmtProm->execute([':id_usuario' => $idUsuario]);
     $promRow = $stmtProm->fetch(PDO::FETCH_ASSOC);
     $promedio = (float)($promRow['promedio'] ?? 0);
 
     if ($promedio > 0 && $monto >= 3 * $promedio) {
-        crear_alerta(
-            $pdo,
-            $idUsuario,
-            $idTarjeta,
-            $idTransaccion,
-            'monto_inusual',
+        crear_alerta($pdo, $idUsuario, $idTarjeta, $idTransaccion, 'monto_inusual',
             'Monto inusualmente alto detectado',
-            "Esta transferencia tiene un monto superior a tu consumo promedio. 
-Si no reconoces la operación, te sugerimos bloquear temporalmente tu tarjeta desde SmartShield.",
-            75
-        );
+            "Esta transferencia tiene un monto superior a tu consumo promedio.", 75);
     }
 
-    // DESTINO NUEVO CON MONTO ALTO
+    // Alerta Destino Nuevo
     if ($numeroCuenta !== '') {
-        $sqlDest = "SELECT COUNT(*) 
-                    FROM transacciones
-                    WHERE id_usuario = :id_usuario
-                      AND numero_cuenta = :cuenta
-                      AND id_transaccion <> :id_tx";
+        $sqlDest = "SELECT COUNT(*) FROM transacciones 
+                    WHERE id_usuario = :id_usuario AND numero_cuenta = :cuenta AND id_transaccion <> :id_tx";
         $stmtDest = $pdo->prepare($sqlDest);
-        $stmtDest->execute([
-            ':id_usuario' => $idUsuario,
-            ':cuenta'     => $numeroCuenta,
-            ':id_tx'      => $idTransaccion
-        ]);
+        $stmtDest->execute([':id_usuario' => $idUsuario, ':cuenta' => $numeroCuenta, ':id_tx' => $idTransaccion]);
         $veces = (int)$stmtDest->fetchColumn();
 
         if ($veces === 0 && $monto >= 3000) { 
-            crear_alerta(
-                $pdo,
-                $idUsuario,
-                $idTarjeta,
-                $idTransaccion,
-                'destino_nuevo',
+            crear_alerta($pdo, $idUsuario, $idTarjeta, $idTransaccion, 'destino_nuevo',
                 'Transferencia importante a un nuevo destinatario',
-                "Realizaste una transferencia de S/ " . number_format($monto, 2) .
-                    " a un destinatario que nunca antes habías utilizado. 
-Si no eres tú, comunícate con el banco de inmediato.",
-                70
-            );
+                "Transferencia de S/ " . number_format($monto, 2) . " a un nuevo destinatario.", 70);
         }
     }
 }
+?>
