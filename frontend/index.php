@@ -116,11 +116,11 @@ function formatearFechaAlerta($fechaHora)
             </button>
 
             <nav class="nav-main" id="navMain">
-                <a href="/SmartShield-Interbank/frontend/index.php" class="activo">Inicio</a>
-                <a href="/SmartShield-Interbank/frontend/movimientos.php">Movimientos</a>
-                <a href="/SmartShield-Interbank/frontend/configuracion.php">Configuracion</a>
-                <a href="#">Seguridad</a>
-            </nav>
+    <a href="index.php">Inicio</a>
+    <a href="movimientos.php">Movimientos</a>
+    <a href="configuracion.php" class="activo">Configuración</a>
+    <a href="configuracion.php">Seguridad</a>
+</nav>
         </div>
 
         <div class="header-right">
