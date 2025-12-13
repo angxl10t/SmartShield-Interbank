@@ -1,13 +1,17 @@
 <?php
 session_start();
 
+// --- CORRECCIÓN CRÍTICA DE ZONA HORARIA ---
+date_default_timezone_set('America/Lima'); 
+// ------------------------------------------
+
 if (!isset($_SESSION['autenticado']) || $_SESSION['autenticado'] !== true) {
     header("Location: ../../frontend/inicio.php");
     exit;
 }
 
 require_once "../bd/conexion.php";
-require_once "../ml/ml_smartshield.php";
+require_once "../ml/mi_smartshield.php"; // Asegúrate que el nombre del archivo ML sea correcto
 
 $idUsuario = $_SESSION['id_usuario'] ?? null;
 
@@ -79,7 +83,7 @@ if ($moneda === 'USD' && $usoInternacional === 0) {
 }
 
 // C. VALIDACIÓN DE HORARIO
-$horaActual = date('H:i:s');
+$horaActual = date('H:i:s'); // Ahora usará hora de Perú gracias al fix
 $transaccionPermitidaHorario = false;
 
 // Lógica para rangos de hora (incluso si cruzan medianoche)
@@ -190,7 +194,6 @@ try {
     $idTransaccion = $pdo->lastInsertId();
     
     // === ANÁLISIS MACHINE LEARNING INTELIGENTE ===
-    // Aunque la transacción pasó las reglas duras, el ML busca patrones anómalos
     $mlTransactionData = [
         'id_usuario' => $idUsuario,
         'monto' => $monto,
@@ -206,20 +209,13 @@ try {
         'tipo_tarjeta' => 'credito'
     ];
     
-    generateSmartMLAlert($pdo, $idUsuario, $idTarjeta, $idTransaccion, $mlTransactionData);
-
-    // === IA BASADA EN REGLAS (Alertas informativas adicionales) ===
-    evaluar_riesgos_y_generar_alertas(
-        $pdo,
-        $idUsuario,
-        $idTarjeta,
-        $idTransaccion,
-        $monto,
-        date('Y-m-d H:i:s'),
-        $destino,
-        $aliasDestino,
-        $numeroCuenta
-    );
+    // IMPORTANTE: Asegúrate de tener esta función disponible (require mi_smartshield.php)
+    if (function_exists('generateSmartMLAlert')) {
+        generateSmartMLAlert($pdo, $idUsuario, $idTarjeta, $idTransaccion, $mlTransactionData);
+    } else {
+        // Fallback si ML no está cargado
+        evaluar_riesgos_y_generar_alertas($pdo, $idUsuario, $idTarjeta, $idTransaccion, $monto, date('Y-m-d H:i:s'), $destino, $aliasDestino, $numeroCuenta);
+    }
 
     $pdo->commit();
     header("Location: ../../frontend/index.php?ok=1");
@@ -230,7 +226,7 @@ try {
     die("Error al registrar la transferencia: " . $e->getMessage());
 }
 
-// FUNCIONES DE APOYO (Mantienen lógica de alertas post-transacción)
+// FUNCIONES DE APOYO
 
 function crear_alerta(PDO $pdo, $idUsuario, $idTarjeta, $idTransaccion, $tipo, $titulo, $mensaje, $nivelRiesgo = 50)
 {
@@ -254,7 +250,6 @@ function crear_alerta(PDO $pdo, $idUsuario, $idTarjeta, $idTransaccion, $tipo, $
 function evaluar_riesgos_y_generar_alertas(
     PDO $pdo, $idUsuario, $idTarjeta, $idTransaccion, $monto, $fechaHora, $destino, $aliasDestino, $numeroCuenta
 ) {
-    // Re-leemos configuración para las alertas
     $sql = "SELECT limite_semanal, gasto_semanal_actual FROM config_seguridad_tarjeta WHERE id_tarjeta = :id_tarjeta LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':id_tarjeta' => $idTarjeta]);
@@ -275,7 +270,7 @@ function evaluar_riesgos_y_generar_alertas(
         }
     }
 
-    // Alerta Monto Inusual (Promedio)
+    // Alerta Monto Inusual
     $sqlProm = "SELECT AVG(monto) AS promedio FROM transacciones 
                 WHERE id_usuario = :id_usuario AND fecha_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND monto > 0";
     $stmtProm = $pdo->prepare($sqlProm);
