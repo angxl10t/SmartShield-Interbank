@@ -1,17 +1,35 @@
 <?php
 session_start();
 
-// --- CORRECCIÓN CRÍTICA DE ZONA HORARIA ---
+// --- ZONA HORARIA Y ERRORES ---
 date_default_timezone_set('America/Lima'); 
-// ------------------------------------------
+ini_set('display_errors', 0); // Ocultar errores en pantalla para el usuario
+error_reporting(E_ALL);
+// ------------------------------
 
 if (!isset($_SESSION['autenticado']) || $_SESSION['autenticado'] !== true) {
     header("Location: ../../frontend/inicio.php");
     exit;
 }
 
+// 1. Cargar Conexión (Ruta relativa dentro de backend)
 require_once "../bd/conexion.php";
-require_once "../ml/mi_smartshield.php"; // Asegúrate que el nombre del archivo ML sea correcto
+
+// 2. Cargar Machine Learning con RUTA CORREGIDA y PROTECCIÓN DE FALLOS
+$ruta_ml_raiz = "../../ml/mi_smartshield.php"; // Ruta si 'ml' está en la raíz
+$ruta_ml_backend = "../ml/mi_smartshield.php"; // Ruta si 'ml' está en backend
+
+if (file_exists($ruta_ml_raiz)) {
+    require_once $ruta_ml_raiz;
+} elseif (file_exists($ruta_ml_backend)) {
+    require_once $ruta_ml_backend;
+} else {
+    // === MODO DE SEGURIDAD (FALLBACK) ===
+    // Si no encuentra el archivo ML, definimos funciones vacías para que NO SALGA ERROR FATAL
+    if (!function_exists('generateSmartMLAlert')) {
+        function generateSmartMLAlert($a, $b, $c, $d, $e) { return false; }
+    }
+}
 
 $idUsuario = $_SESSION['id_usuario'] ?? null;
 
@@ -19,7 +37,7 @@ if (!$idUsuario) {
     die("Usuario no identificado en la sesión.");
 }
 
-// 1. Recoger datos
+// 3. Recoger datos
 $destino      = trim($_POST['destinatario']   ?? '');
 $aliasDestino = trim($_POST['alias_destino']  ?? '');
 $numeroCuenta = trim($_POST['cuenta_destino'] ?? '');
@@ -36,7 +54,7 @@ if ($descripcion === '') {
     $descripcion = 'Transferencia simulada';
 }
 
-// 2. Obtener datos de tarjeta Y configuración de seguridad
+// 4. Obtener datos de tarjeta Y configuración de seguridad
 $sqlTarjeta = "SELECT t.id_tarjeta, t.saldo_disponible, t.uso_internacional,
                       c.id_config, c.gasto_semanal_actual, c.fecha_ultimo_reset_semanal, 
                       c.limite_semanal, c.horario_inicio, c.horario_fin
@@ -57,7 +75,7 @@ if (!$info) {
 // Variables de tarjeta y configuración
 $idTarjeta          = (int)$info['id_tarjeta'];
 $saldoDisponible    = (float)$info['saldo_disponible'];
-$usoInternacional   = (int)$info['uso_internacional']; // 1 = Activo, 0 = Inactivo
+$usoInternacional   = (int)$info['uso_internacional']; 
 
 $idConfig           = $info['id_config'] ?? null;
 $limiteSemanal      = isset($info['limite_semanal']) ? (float)$info['limite_semanal'] : 0;
@@ -67,7 +85,7 @@ $horarioInicio      = $info['horario_inicio'] ?? '00:00:00';
 $horarioFin         = $info['horario_fin'] ?? '23:59:59';
 
 // =================================================================================
-// 🛡️ BLOQUE 1: VALIDACIONES DE SEGURIDAD (SMARTSHIELD) - ANTES DE PROCESAR
+// 🛡️ BLOQUE 1: VALIDACIONES DE SEGURIDAD (SMARTSHIELD)
 // =================================================================================
 
 // A. VALIDACIÓN DE SALDO
@@ -76,17 +94,16 @@ if ($monto > $saldoDisponible) {
     exit;
 }
 
-// B. VALIDACIÓN DE USO INTERNACIONAL (Simulación: Si es Dólares y está desactivado)
+// B. VALIDACIÓN DE USO INTERNACIONAL
 if ($moneda === 'USD' && $usoInternacional === 0) {
     header("Location: ../../frontend/index.php?error=bloqueo_internacional");
     exit;
 }
 
 // C. VALIDACIÓN DE HORARIO
-$horaActual = date('H:i:s'); // Ahora usará hora de Perú gracias al fix
+$horaActual = date('H:i:s');
 $transaccionPermitidaHorario = false;
 
-// Lógica para rangos de hora (incluso si cruzan medianoche)
 if ($horarioInicio <= $horarioFin) {
     // Rango normal (Ej: 06:00 a 23:00)
     if ($horaActual >= $horarioInicio && $horaActual <= $horarioFin) {
@@ -104,7 +121,7 @@ if (!$transaccionPermitidaHorario) {
     exit;
 }
 
-// D. REINICIO DE GASTO SEMANAL (Si es una nueva semana)
+// D. REINICIO DE GASTO SEMANAL
 $hoy          = new DateTime('now');
 $inicioSemana = (clone $hoy)->modify('monday this week')->setTime(0, 0, 0);
 
@@ -127,7 +144,7 @@ if ($limiteSemanal > 0) {
 }
 
 // =================================================================================
-// FIN BLOQUE VALIDACIONES - PROCESAMIENTO DE TRANSFERENCIA
+// PROCESAMIENTO DE TRANSFERENCIA
 // =================================================================================
 
 $nuevoGastoSemanal = $gastoSemanalActual + $monto;
@@ -167,7 +184,7 @@ try {
         ':id_tarjeta' => $idTarjeta
     ]);
 
-    // 3. Verificar total real semanal (doble check) y actualizar config
+    // 3. Verificar total real semanal
     $sqlSuma = "SELECT COALESCE(SUM(monto), 0) AS total_semana
             FROM transacciones
             WHERE id_tarjeta = :id_tarjeta
@@ -190,10 +207,9 @@ try {
         ]);
     }
 
-    // Obtener ID de la transacción recién insertada para ML
     $idTransaccion = $pdo->lastInsertId();
     
-    // === ANÁLISIS MACHINE LEARNING INTELIGENTE ===
+    // === ANÁLISIS MACHINE LEARNING ===
     $mlTransactionData = [
         'id_usuario' => $idUsuario,
         'monto' => $monto,
@@ -209,13 +225,13 @@ try {
         'tipo_tarjeta' => 'credito'
     ];
     
-    // IMPORTANTE: Asegúrate de tener esta función disponible (require mi_smartshield.php)
+    // Intentar ejecutar ML si existe la función
     if (function_exists('generateSmartMLAlert')) {
         generateSmartMLAlert($pdo, $idUsuario, $idTarjeta, $idTransaccion, $mlTransactionData);
-    } else {
-        // Fallback si ML no está cargado
-        evaluar_riesgos_y_generar_alertas($pdo, $idUsuario, $idTarjeta, $idTransaccion, $monto, date('Y-m-d H:i:s'), $destino, $aliasDestino, $numeroCuenta);
-    }
+    } 
+    
+    // Ejecutar reglas clásicas
+    evaluar_riesgos_y_generar_alertas($pdo, $idUsuario, $idTarjeta, $idTransaccion, $monto, date('Y-m-d H:i:s'), $destino, $aliasDestino, $numeroCuenta);
 
     $pdo->commit();
     header("Location: ../../frontend/index.php?ok=1");
@@ -260,7 +276,6 @@ function evaluar_riesgos_y_generar_alertas(
     $limiteSemanal = (float)($config['limite_semanal'] ?? 0);
     $gastoSemanal  = (float)($config['gasto_semanal_actual'] ?? 0);
 
-    // Alerta de Límite Cercano (Amarillo)
     if ($limiteSemanal > 0) {
         $ratio = $gastoSemanal / $limiteSemanal;
         if ($ratio >= 0.7 && $ratio < 1.0) {
@@ -270,7 +285,6 @@ function evaluar_riesgos_y_generar_alertas(
         }
     }
 
-    // Alerta Monto Inusual
     $sqlProm = "SELECT AVG(monto) AS promedio FROM transacciones 
                 WHERE id_usuario = :id_usuario AND fecha_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND monto > 0";
     $stmtProm = $pdo->prepare($sqlProm);
@@ -284,7 +298,6 @@ function evaluar_riesgos_y_generar_alertas(
             "Esta transferencia tiene un monto superior a tu consumo promedio.", 75);
     }
 
-    // Alerta Destino Nuevo
     if ($numeroCuenta !== '') {
         $sqlDest = "SELECT COUNT(*) FROM transacciones 
                     WHERE id_usuario = :id_usuario AND numero_cuenta = :cuenta AND id_transaccion <> :id_tx";
