@@ -37,8 +37,6 @@ $sql = "SELECT
         $condiciones
         ORDER BY fecha_hora DESC";
 
-
-
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $movimientos = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -78,7 +76,7 @@ function formatearFecha($fecha)
                 <a href="index.php">Inicio</a>
                 <a href="movimientos.php" class="activo">Movimientos</a>
                 <a href="configuracion.php">Configuración</a>
-                <a href="#">Seguridad</a>
+                <a href="configuracion.php">Seguridad</a>
             </nav>
         </div>
 
@@ -88,9 +86,9 @@ function formatearFecha($fecha)
                     <?php echo htmlspecialchars($nombreUsuario); ?> ▾
                 </div>
                 <div class="user-dropdown" id="userDropdown">
-                    <a href="#">Mi perfil</a>
+                    <a href="configuracion.php">Mi perfil</a>
                     <a href="configuracion.php">Configuración</a>
-                    <a href="#">Claves y seguridad</a>
+                    <a href="configuracion.php">Claves y seguridad</a>
                     <a href="../backend/controlador/logout.php">Cerrar sesión</a>
                 </div>
             </div>
@@ -170,7 +168,6 @@ function formatearFecha($fecha)
                                 <div class="mov-linea2">
                                     <span class="mov-destino">
                                         <?php echo htmlspecialchars(ucfirst($tipo)); ?>
-
                                     </span>
                                     <span class="mov-fecha">
                                         <?php echo htmlspecialchars(formatearFecha($mov['fecha_hora'])); ?>
@@ -238,5 +235,4 @@ function formatearFecha($fecha)
     <script src="https://files.bpcontent.cloud/2025/11/15/08/20251115083512-2553XNUV.js" defer></script>
 
 </body>
-
 </html>
